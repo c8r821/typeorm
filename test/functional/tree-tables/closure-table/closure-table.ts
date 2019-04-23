@@ -45,6 +45,9 @@ describe("tree tables > closure-table", () => {
         a1Children.should.deep.include({ id: 1, name: "a1" });
         a1Children.should.deep.include({ id: 2, name: "a11" });
         a1Children.should.deep.include({ id: 3, name: "a12" });
+
+        const a1Tree = await categoryRepository.findDescendantsTree(rootCategories[0], { select: ['name'] });
+        console.log(a1Tree);
     })));
 
     it("categories should be attached via children and saved properly", () => Promise.all(connections.map(async connection => {

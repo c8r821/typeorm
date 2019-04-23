@@ -2,6 +2,8 @@ import {Repository} from "./Repository";
 import {SelectQueryBuilder} from "../query-builder/SelectQueryBuilder";
 import {ObjectLiteral} from "../common/ObjectLiteral";
 import {AbstractSqliteDriver} from "../driver/sqlite-abstract/AbstractSqliteDriver";
+import { FindOptionsUtils } from '../find-options/FindOptionsUtils';
+import { FindManyOptions } from '../find-options/FindManyOptions';
 
 /**
  * Repository with additional functions to work with trees.
@@ -53,16 +55,22 @@ export class TreeRepository<Entity> extends Repository<Entity> {
     /**
      * Gets all children (descendants) of the given entity. Returns them in a tree - nested into each other.
      */
-    findDescendantsTree(entity: Entity): Promise<Entity> {
+    findDescendantsTree(entity: Entity, optionsOrConditions?: FindManyOptions<Entity>): Promise<Entity> {
         // todo: throw exception if there is no column of this relation?
-        return this
-            .createDescendantsQueryBuilder("treeEntity", "treeClosure", entity)
-            .getRawAndEntities()
-            .then(entitiesAndScalars => {
-                const relationMaps = this.createRelationMaps("treeEntity", entitiesAndScalars.raw);
-                this.buildChildrenEntityTree(entity, entitiesAndScalars.entities, relationMaps);
-                return entity;
-            });
+        const qb = this
+            .createDescendantsQueryBuilder("treeEntity", "treeClosure", entity);
+        
+        if (!FindOptionsUtils.isFindManyOptions(optionsOrConditions) || optionsOrConditions.loadEagerRelations !== false)
+            FindOptionsUtils.joinEagerRelations(qb, qb.alias, this.metadata);
+
+        return FindOptionsUtils.applyFindManyOptionsOrConditionsToQueryBuilder(qb, optionsOrConditions)
+        .getRawAndEntities()
+        .then(entitiesAndScalars => {
+            const relationMaps = this.createRelationMaps("treeEntity", entitiesAndScalars.raw);
+            this.buildChildrenEntityTree(entity, entitiesAndScalars.entities, relationMaps);
+            return entity;
+        });;
+        // return 
     }
 
     /**
